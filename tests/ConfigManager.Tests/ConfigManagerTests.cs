@@ -331,4 +331,104 @@ public class ConfigManagerTests
         Expect(() => manager.SetAttribute("/configuration", invalidArgument!, "value")).To.Throw<ArgumentException>();
         Expect(() => _ = manager.RemoveElement(invalidArgument!)).To.Throw<ArgumentException>();
     }
+
+    [Test]
+    public void SetConnectionString_And_ReadConnectionString_PersistsToDiskAndUpdatesExisting()
+    {
+        manager.Create();
+
+        manager.SetConnectionString("MainDatabase", "Server=localhost;Database=Parking;", "System.Data.SqlClient");
+        manager.SetConnectionString("LocalCache", "Data Source=cache.db");
+
+        var reader = new ConfigManager(configurationPath);
+        Expect(reader.ReadConnectionStrings().Count).To.Equal(2);
+        Expect(reader.ReadConnectionString("MainDatabase")).To.Equal("Server=localhost;Database=Parking;");
+        Expect(reader.ReadAttribute<string>("/configuration/connectionStrings/add[@name='MainDatabase']", "providerName"))
+            .To.Equal("System.Data.SqlClient");
+
+        manager.SetConnectionString("MainDatabase", "Server=10.0.0.1;Database=Parking;");
+
+        Expect(new ConfigManager(configurationPath).ReadConnectionString("MainDatabase"))
+            .To.Equal("Server=10.0.0.1;Database=Parking;");
+    }
+
+    [Test]
+    public void ReadConnectionString_And_RemoveConnectionString_WhenMissing_ReturnsNullOrFalse()
+    {
+        manager.Create();
+
+        Expect(manager.ReadConnectionStrings()).To.Be.Empty();
+        Expect(manager.ReadConnectionString("Missing")).To.Be.Null();
+        Expect(manager.RemoveConnectionString("Missing")).To.Be.False();
+    }
+
+    [Test]
+    public void RemoveConnectionString_WhenExists_RemovesFromDiskAndReturnsTrue()
+    {
+        manager.Create();
+        manager.SetConnectionString("MainDatabase", "Server=localhost;");
+
+        Expect(manager.RemoveConnectionString("MainDatabase")).To.Be.True();
+        Expect(new ConfigManager(configurationPath).ReadConnectionString("MainDatabase")).To.Be.Null();
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("   ")]
+    public void ConnectionStringMethods_WithNullOrWhiteSpaceArguments_ThrowArgumentException(string? invalidArgument)
+    {
+        manager.Create();
+
+        Expect(() => _ = manager.ReadConnectionString(invalidArgument!)).To.Throw<ArgumentException>();
+        Expect(() => manager.SetConnectionString(invalidArgument!, "Server=localhost;")).To.Throw<ArgumentException>();
+        Expect(() => manager.SetConnectionString("MainDatabase", invalidArgument!)).To.Throw<ArgumentException>();
+        Expect(() => _ = manager.RemoveConnectionString(invalidArgument!)).To.Throw<ArgumentException>();
+    }
+
+    [Test]
+    public void ReadEndpointAddress_And_SetEndpointAddress_ReadsAndUpdatesWcfClientEndpoints()
+    {
+        File.WriteAllText(configurationPath, """
+            <?xml version="1.0" encoding="utf-8"?>
+            <configuration>
+              <system.serviceModel>
+                <client>
+                  <endpoint address="net.tcp://localhost:5000/AuthenticationService" binding="netTcpBinding" name="NetTcpBinding_IAuthenticationService" />
+                  <endpoint address="net.tcp://localhost:5000/BOFService" binding="netTcpBinding" name="NetTcpBinding_IBOFService" />
+                </client>
+              </system.serviceModel>
+            </configuration>
+            """);
+
+        Expect(manager.ReadEndpointAddresses().Count).To.Equal(2);
+        Expect(manager.ReadEndpointAddress("NetTcpBinding_IBOFService")).To.Equal("net.tcp://localhost:5000/BOFService");
+
+        manager.SetEndpointAddress("NetTcpBinding_IBOFService", "net.tcp://192.168.1.20:5000/BOFService");
+
+        Expect(new ConfigManager(configurationPath).ReadEndpointAddress("NetTcpBinding_IBOFService"))
+            .To.Equal("net.tcp://192.168.1.20:5000/BOFService");
+    }
+
+    [Test]
+    public void EndpointAddressMethods_WhenMissing_ReturnEmptyOrNullOrThrowOnSet()
+    {
+        manager.Create();
+
+        Expect(manager.ReadEndpointAddresses()).To.Be.Empty();
+        Expect(manager.ReadEndpointAddress("MissingEndpoint")).To.Be.Null();
+        Expect(() => manager.SetEndpointAddress("MissingEndpoint", "net.tcp://localhost:5000/Missing"))
+            .To.Throw<InvalidOperationException>();
+    }
+
+    [TestCase(null)]
+    [TestCase("")]
+    [TestCase("   ")]
+    public void EndpointAddressMethods_WithNullOrWhiteSpaceArguments_ThrowArgumentException(string? invalidArgument)
+    {
+        manager.Create();
+
+        Expect(() => _ = manager.ReadEndpointAddress(invalidArgument!)).To.Throw<ArgumentException>();
+        Expect(() => manager.SetEndpointAddress(invalidArgument!, "net.tcp://localhost:5000/Service")).To.Throw<ArgumentException>();
+        Expect(() => manager.SetEndpointAddress("ServiceEndpoint", invalidArgument!)).To.Throw<ArgumentException>();
+    }
 }
