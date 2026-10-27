@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\ConfigManager\ConfigManager.csproj" />
+    <ProjectReference Include="..\..\src\ExeConfigManager\ExeConfigManager.csproj" />
   </ItemGroup>
 
 </Project>

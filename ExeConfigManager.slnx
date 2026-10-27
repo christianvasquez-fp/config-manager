@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ExeConfigManager/ExeConfigManager.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ExeConfigManager.Tests/ExeConfigManager.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -3,12 +3,12 @@ using System.Globalization;
 using System.Xml.Linq;
 using System.Xml.XPath;
 
-namespace ConfigManager;
+namespace ExeConfigManager;
 
 /// <summary>
 /// Manages local .exe.config files, automatically saving changes on every mutation.
 /// </summary>
-public class ConfigManager : IConfigManager
+public class ExeConfigManager : IExeConfigManager
 {
     const string RootElementName = "configuration";
     const string AppSettingsElementName = "appSettings";
@@ -25,11 +25,11 @@ public class ConfigManager : IConfigManager
     const string AddressAttributeName = "address";
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ConfigManager"/> class for the specified file path.
+    /// Initializes a new instance of the <see cref="ExeConfigManager"/> class for the specified file path.
     /// </summary>
     /// <param name="filePath">The path to the .exe.config file.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is null, empty, or whitespace.</exception>
-    public ConfigManager(string filePath)
+    public ExeConfigManager(string filePath)
     {
         ValidateNotNullOrWhiteSpace(filePath, nameof(filePath));
         FilePath = Path.GetFullPath(filePath);

@@ -1,4 +1,4 @@
-# ConfigManager
+# ExeConfigManager
 
 A lightweight, strongly-typed .NET Standard 2.0 library for creating, reading, updating, and removing local `.exe.config` files, automatically saving changes on every mutation.
 
@@ -11,9 +11,9 @@ dotnet add package ExeConfigManager
 ## Quick Start
 
 ```csharp
-using ConfigManager;
+using ExeConfigManager;
 
-var manager = new ConfigManager.ConfigManager(@"C:\MyApp\MyApp.exe.config");
+var manager = new ExeConfigManager(@"C:\MyApp\MyApp.exe.config");
 
 if (!manager.Exists())
 {
