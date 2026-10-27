@@ -12,9 +12,17 @@ public class ConfigManager : IConfigManager
 {
     const string RootElementName = "configuration";
     const string AppSettingsElementName = "appSettings";
+    const string ConnectionStringsElementName = "connectionStrings";
+    const string SystemServiceModelElementName = "system.serviceModel";
+    const string ClientElementName = "client";
+    const string EndpointElementName = "endpoint";
     const string AddElementName = "add";
     const string KeyAttributeName = "key";
     const string ValueAttributeName = "value";
+    const string NameAttributeName = "name";
+    const string ConnectionStringAttributeName = "connectionString";
+    const string ProviderNameAttributeName = "providerName";
+    const string AddressAttributeName = "address";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ConfigManager"/> class for the specified file path.
@@ -84,27 +92,8 @@ public class ConfigManager : IConfigManager
     }
 
     /// <inheritdoc />
-    public IReadOnlyDictionary<string, string> ReadSettings()
-    {
-        var document = ReadDocument();
-        var result = new Dictionary<string, string>(StringComparer.Ordinal);
-        var appSettings = document.Root!.Element(AppSettingsElementName);
-        if (appSettings == null)
-        {
-            return result;
-        }
-
-        foreach (var addElement in appSettings.Elements(AddElementName))
-        {
-            var key = addElement.Attribute(KeyAttributeName)?.Value;
-            if (!string.IsNullOrEmpty(key))
-            {
-                result[key!] = addElement.Attribute(ValueAttributeName)?.Value ?? string.Empty;
-            }
-        }
-
-        return result;
-    }
+    public IReadOnlyDictionary<string, string> ReadSettings() =>
+        ReadPairs(ReadDocument().Root!.Element(AppSettingsElementName), AddElementName, KeyAttributeName, ValueAttributeName);
 
     /// <inheritdoc />
     public T? ReadSetting<T>(string key, T? defaultValue = default)
@@ -122,28 +111,10 @@ public class ConfigManager : IConfigManager
         ValidateNotNullOrWhiteSpace(key, nameof(key));
 
         var document = ReadDocument();
-        var root = document.Root!;
-        var appSettings = root.Element(AppSettingsElementName);
-        if (appSettings == null)
-        {
-            appSettings = new XElement(AppSettingsElementName);
-            root.Add(appSettings);
-        }
+        var appSettings = GetOrCreateChildElement(document.Root!, AppSettingsElementName);
+        var element = GetOrCreateElementByAttribute(appSettings, AddElementName, KeyAttributeName, key);
 
-        var formattedValue = FormatValue(value);
-        var existingElement = FindAppSettingElements(appSettings, key).LastOrDefault();
-        if (existingElement != null)
-        {
-            existingElement.SetAttributeValue(ValueAttributeName, formattedValue);
-        }
-        else
-        {
-            appSettings.Add(new XElement(
-                AddElementName,
-                new XAttribute(KeyAttributeName, key),
-                new XAttribute(ValueAttributeName, formattedValue)));
-        }
-
+        element.SetAttributeValue(ValueAttributeName, FormatValue(value));
         document.Save(FilePath);
     }
 
@@ -151,27 +122,82 @@ public class ConfigManager : IConfigManager
     public bool RemoveSetting(string key)
     {
         ValidateNotNullOrWhiteSpace(key, nameof(key));
+        return RemoveMatchingChildElements(AppSettingsElementName, AddElementName, KeyAttributeName, key);
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, string> ReadConnectionStrings() =>
+        ReadPairs(ReadDocument().Root!.Element(ConnectionStringsElementName), AddElementName, NameAttributeName, ConnectionStringAttributeName);
+
+    /// <inheritdoc />
+    public string? ReadConnectionString(string name)
+    {
+        ValidateNotNullOrWhiteSpace(name, nameof(name));
+
+        return ReadConnectionStrings().TryGetValue(name, out var connectionString)
+            ? connectionString
+            : null;
+    }
+
+    /// <inheritdoc />
+    public void SetConnectionString(string name, string connectionString, string? providerName = null)
+    {
+        ValidateNotNullOrWhiteSpace(name, nameof(name));
+        ValidateNotNullOrWhiteSpace(connectionString, nameof(connectionString));
 
         var document = ReadDocument();
-        var appSettings = document.Root!.Element(AppSettingsElementName);
-        if (appSettings == null)
-        {
-            return false;
-        }
+        var connectionStrings = GetOrCreateChildElement(document.Root!, ConnectionStringsElementName);
+        var element = GetOrCreateElementByAttribute(connectionStrings, AddElementName, NameAttributeName, name);
 
-        var matchingElements = FindAppSettingElements(appSettings, key).ToList();
-        if (matchingElements.Count == 0)
+        element.SetAttributeValue(ConnectionStringAttributeName, connectionString);
+        if (!string.IsNullOrWhiteSpace(providerName))
         {
-            return false;
-        }
-
-        foreach (var element in matchingElements)
-        {
-            element.Remove();
+            element.SetAttributeValue(ProviderNameAttributeName, providerName);
         }
 
         document.Save(FilePath);
-        return true;
+    }
+
+    /// <inheritdoc />
+    public bool RemoveConnectionString(string name)
+    {
+        ValidateNotNullOrWhiteSpace(name, nameof(name));
+        return RemoveMatchingChildElements(ConnectionStringsElementName, AddElementName, NameAttributeName, name);
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyDictionary<string, string> ReadEndpointAddresses() =>
+        ReadPairs(GetClientSection(ReadDocument()), EndpointElementName, NameAttributeName, AddressAttributeName);
+
+    /// <inheritdoc />
+    public string? ReadEndpointAddress(string endpointName)
+    {
+        ValidateNotNullOrWhiteSpace(endpointName, nameof(endpointName));
+
+        return ReadEndpointAddresses().TryGetValue(endpointName, out var address)
+            ? address
+            : null;
+    }
+
+    /// <inheritdoc />
+    public void SetEndpointAddress(string endpointName, string address)
+    {
+        ValidateNotNullOrWhiteSpace(endpointName, nameof(endpointName));
+        ValidateNotNullOrWhiteSpace(address, nameof(address));
+
+        var document = ReadDocument();
+        var clientSection = GetClientSection(document);
+        var endpointElement = clientSection != null
+            ? FindElementsByAttribute(clientSection, EndpointElementName, NameAttributeName, endpointName).LastOrDefault()
+            : null;
+
+        if (endpointElement == null)
+        {
+            throw new InvalidOperationException($"No WCF client endpoint found with name '{endpointName}'.");
+        }
+
+        endpointElement.SetAttributeValue(AddressAttributeName, address);
+        document.Save(FilePath);
     }
 
     /// <inheritdoc />
@@ -222,10 +248,95 @@ public class ConfigManager : IConfigManager
         return true;
     }
 
-    static IEnumerable<XElement> FindAppSettingElements(XElement appSettings, string key) =>
-        appSettings
-            .Elements(AddElementName)
-            .Where(element => string.Equals(element.Attribute(KeyAttributeName)?.Value, key, StringComparison.Ordinal));
+    bool RemoveMatchingChildElements(string sectionName, string elementName, string keyAttributeName, string keyValue)
+    {
+        var document = ReadDocument();
+        var section = document.Root!.Element(sectionName);
+        if (section == null)
+        {
+            return false;
+        }
+
+        var matchingElements = FindElementsByAttribute(section, elementName, keyAttributeName, keyValue).ToList();
+        if (matchingElements.Count == 0)
+        {
+            return false;
+        }
+
+        foreach (var element in matchingElements)
+        {
+            element.Remove();
+        }
+
+        document.Save(FilePath);
+        return true;
+    }
+
+    static XElement? GetClientSection(XDocument document) =>
+        document.Root?
+            .Element(SystemServiceModelElementName)?
+            .Element(ClientElementName);
+
+    static XElement GetOrCreateChildElement(XElement parent, string elementName)
+    {
+        var child = parent.Element(elementName);
+        if (child == null)
+        {
+            child = new XElement(elementName);
+            parent.Add(child);
+        }
+
+        return child;
+    }
+
+    static XElement GetOrCreateElementByAttribute(
+        XElement parent,
+        string elementName,
+        string attributeName,
+        string attributeValue)
+    {
+        var element = FindElementsByAttribute(parent, elementName, attributeName, attributeValue).LastOrDefault();
+        if (element == null)
+        {
+            element = new XElement(elementName, new XAttribute(attributeName, attributeValue));
+            parent.Add(element);
+        }
+
+        return element;
+    }
+
+    static IReadOnlyDictionary<string, string> ReadPairs(
+        XElement? section,
+        string childElementName,
+        string keyAttributeName,
+        string valueAttributeName)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (section == null)
+        {
+            return result;
+        }
+
+        foreach (var element in section.Elements(childElementName))
+        {
+            var key = element.Attribute(keyAttributeName)?.Value;
+            if (!string.IsNullOrEmpty(key))
+            {
+                result[key!] = element.Attribute(valueAttributeName)?.Value ?? string.Empty;
+            }
+        }
+
+        return result;
+    }
+
+    static IEnumerable<XElement> FindElementsByAttribute(
+        XElement parent,
+        string elementName,
+        string attributeName,
+        string attributeValue) =>
+        parent
+            .Elements(elementName)
+            .Where(element => string.Equals(element.Attribute(attributeName)?.Value, attributeValue, StringComparison.Ordinal));
 
     static void ValidateNotNullOrWhiteSpace(string value, string parameterName)
     {

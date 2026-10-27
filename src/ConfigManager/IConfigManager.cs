@@ -69,6 +69,55 @@ public interface IConfigManager
     bool RemoveSetting(string key);
 
     /// <summary>
+    /// Reads all name-connectionString pairs from the <c>&lt;connectionStrings&gt;</c> section.
+    /// </summary>
+    /// <returns>A read-only dictionary of all connection strings by name.</returns>
+    IReadOnlyDictionary<string, string> ReadConnectionStrings();
+
+    /// <summary>
+    /// Reads a connection string value from the <c>&lt;connectionStrings&gt;</c> section by name.
+    /// </summary>
+    /// <param name="name">The connection string name.</param>
+    /// <returns>The connection string value, or <c>null</c> if not found.</returns>
+    string? ReadConnectionString(string name);
+
+    /// <summary>
+    /// Adds or updates a connection string in the <c>&lt;connectionStrings&gt;</c> section and automatically saves the file to disk.
+    /// </summary>
+    /// <param name="name">The connection string name.</param>
+    /// <param name="connectionString">The connection string value.</param>
+    /// <param name="providerName">Optional database provider invariant name.</param>
+    void SetConnectionString(string name, string connectionString, string? providerName = null);
+
+    /// <summary>
+    /// Removes a connection string by name from the <c>&lt;connectionStrings&gt;</c> section and automatically saves the file to disk.
+    /// </summary>
+    /// <param name="name">The connection string name to remove.</param>
+    /// <returns><c>true</c> if the connection string was found and removed; otherwise, <c>false</c>.</returns>
+    bool RemoveConnectionString(string name);
+
+    /// <summary>
+    /// Reads all WCF client endpoint name-address pairs from <c>&lt;system.serviceModel&gt;&lt;client&gt;</c>.
+    /// </summary>
+    /// <returns>A read-only dictionary of endpoint names and their addresses.</returns>
+    IReadOnlyDictionary<string, string> ReadEndpointAddresses();
+
+    /// <summary>
+    /// Reads a WCF client endpoint address by endpoint name from <c>&lt;system.serviceModel&gt;&lt;client&gt;</c>.
+    /// </summary>
+    /// <param name="endpointName">The endpoint <c>name</c> attribute value.</param>
+    /// <returns>The endpoint address, or <c>null</c> if not found.</returns>
+    string? ReadEndpointAddress(string endpointName);
+
+    /// <summary>
+    /// Updates the <c>address</c> attribute of an existing WCF client endpoint in <c>&lt;system.serviceModel&gt;&lt;client&gt;</c>
+    /// and automatically saves the file to disk.
+    /// </summary>
+    /// <param name="endpointName">The endpoint <c>name</c> attribute value.</param>
+    /// <param name="address">The new endpoint address.</param>
+    void SetEndpointAddress(string endpointName, string address);
+
+    /// <summary>
     /// Reads a strongly-typed attribute value from an XML element matched by XPath.
     /// </summary>
     /// <typeparam name="T">The target type to convert the attribute value to.</typeparam>
