@@ -2,24 +2,24 @@ using System.Xml;
 using NExpect;
 using static NExpect.Expectations;
 
-namespace ConfigManager.Tests;
+namespace ExeConfigManager.Tests;
 
 [TestFixture]
 [Parallelizable(ParallelScope.All)]
 [FixtureLifeCycle(LifeCycle.InstancePerTestCase)]
-public class ConfigManagerTests
+public class ExeConfigManagerTests
 {
     string directory = null!;
     string configurationPath = null!;
-    ConfigManager manager = null!;
+    ExeConfigManager manager = null!;
 
     [SetUp]
     public void SetUp()
     {
-        directory = Path.Combine(Path.GetTempPath(), "ConfigManagerTests_" + Guid.NewGuid().ToString("N"));
+        directory = Path.Combine(Path.GetTempPath(), "ExeConfigManagerTests_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(directory);
         configurationPath = Path.Combine(directory, "TestApp.exe.config");
-        manager = new ConfigManager(configurationPath);
+        manager = new ExeConfigManager(configurationPath);
     }
 
     [TearDown]
@@ -42,7 +42,7 @@ public class ConfigManagerTests
     [TestCase("   ")]
     public void Constructor_WithNullOrWhiteSpacePath_ThrowsArgumentException(string? invalidPath)
     {
-        Expect(() => _ = new ConfigManager(invalidPath!))
+        Expect(() => _ = new ExeConfigManager(invalidPath!))
             .To.Throw<ArgumentException>();
     }
 
@@ -62,7 +62,7 @@ public class ConfigManagerTests
     public void Create_WhenParentDirectoryDoesNotExist_CreatesDirectoryAndFile()
     {
         var nestedPath = Path.Combine(directory, "nested", "subdirectory", "App.exe.config");
-        var nestedManager = new ConfigManager(nestedPath);
+        var nestedManager = new ExeConfigManager(nestedPath);
 
         nestedManager.Create();
 
@@ -141,7 +141,7 @@ public class ConfigManagerTests
         manager.SetSetting("Threshold", 12.75);
         manager.SetSetting("InstanceId", identifier);
 
-        var reader = new ConfigManager(configurationPath);
+        var reader = new ExeConfigManager(configurationPath);
         Expect(reader.ReadSetting<string>("AppName")).To.Equal("SampleApp");
         Expect(reader.ReadSetting<bool>("ServiceEnabled")).To.Be.True();
         Expect(reader.ReadSetting<int>("RetryCount")).To.Equal(3);
@@ -157,7 +157,7 @@ public class ConfigManagerTests
 
         manager.SetSetting("RetryCount", 10);
 
-        var reader = new ConfigManager(configurationPath);
+        var reader = new ExeConfigManager(configurationPath);
         Expect(reader.ReadSetting<int>("RetryCount")).To.Equal(10);
         Expect(reader.ReadSettings().Count).To.Equal(1);
     }
@@ -169,7 +169,7 @@ public class ConfigManagerTests
 
         manager.SetSetting<string?>("OptionalSetting", null);
 
-        var reader = new ConfigManager(configurationPath);
+        var reader = new ExeConfigManager(configurationPath);
         Expect(reader.ReadSetting<string>("OptionalSetting")).To.Equal(string.Empty);
         Expect(reader.ReadSetting<int?>("OptionalSetting")).To.Be.Null();
     }
@@ -214,7 +214,7 @@ public class ConfigManagerTests
         manager.SetSetting("TemporaryKey", "123");
 
         Expect(manager.RemoveSetting("TemporaryKey")).To.Be.True();
-        Expect(new ConfigManager(configurationPath).ReadSettings().ContainsKey("TemporaryKey")).To.Be.False();
+        Expect(new ExeConfigManager(configurationPath).ReadSettings().ContainsKey("TemporaryKey")).To.Be.False();
     }
 
     [Test]
@@ -264,7 +264,7 @@ public class ConfigManagerTests
             "address",
             "net.tcp://10.0.0.99:5000/OrderService");
 
-        var reader = new ConfigManager(configurationPath);
+        var reader = new ExeConfigManager(configurationPath);
         Expect(reader.ReadAttribute<bool>("/configuration/system.windows.forms", "jitDebugging")).To.Be.False();
         Expect(reader.ReadAttribute<string>("/configuration/system.serviceModel/client/endpoint[@name='NetTcpBinding_IOrderService']", "address"))
             .To.Equal("net.tcp://10.0.0.99:5000/OrderService");
@@ -299,7 +299,7 @@ public class ConfigManagerTests
             """);
 
         Expect(manager.RemoveElement("/configuration/system.windows.forms")).To.Be.True();
-        Expect(new ConfigManager(configurationPath).ReadDocument().Root?.Element("system.windows.forms")).To.Be.Null();
+        Expect(new ExeConfigManager(configurationPath).ReadDocument().Root?.Element("system.windows.forms")).To.Be.Null();
     }
 
     [Test]
@@ -341,7 +341,7 @@ public class ConfigManagerTests
         manager.SetConnectionString("MainDatabase", "Server=localhost;Database=Application;", "System.Data.SqlClient");
         manager.SetConnectionString("LocalCache", "Data Source=cache.db");
 
-        var reader = new ConfigManager(configurationPath);
+        var reader = new ExeConfigManager(configurationPath);
         Expect(reader.ReadConnectionStrings().Count).To.Equal(2);
         Expect(reader.ReadConnectionString("MainDatabase")).To.Equal("Server=localhost;Database=Application;");
         Expect(reader.ReadAttribute<string>("/configuration/connectionStrings/add[@name='MainDatabase']", "providerName"))
@@ -349,7 +349,7 @@ public class ConfigManagerTests
 
         manager.SetConnectionString("MainDatabase", "Server=10.0.0.1;Database=Application;");
 
-        Expect(new ConfigManager(configurationPath).ReadConnectionString("MainDatabase"))
+        Expect(new ExeConfigManager(configurationPath).ReadConnectionString("MainDatabase"))
             .To.Equal("Server=10.0.0.1;Database=Application;");
     }
 
@@ -370,7 +370,7 @@ public class ConfigManagerTests
         manager.SetConnectionString("MainDatabase", "Server=localhost;");
 
         Expect(manager.RemoveConnectionString("MainDatabase")).To.Be.True();
-        Expect(new ConfigManager(configurationPath).ReadConnectionString("MainDatabase")).To.Be.Null();
+        Expect(new ExeConfigManager(configurationPath).ReadConnectionString("MainDatabase")).To.Be.Null();
     }
 
     [TestCase(null)]
@@ -406,7 +406,7 @@ public class ConfigManagerTests
 
         manager.SetEndpointAddress("NetTcpBinding_IOrderService", "net.tcp://192.168.1.20:5000/OrderService");
 
-        Expect(new ConfigManager(configurationPath).ReadEndpointAddress("NetTcpBinding_IOrderService"))
+        Expect(new ExeConfigManager(configurationPath).ReadEndpointAddress("NetTcpBinding_IOrderService"))
             .To.Equal("net.tcp://192.168.1.20:5000/OrderService");
     }
 

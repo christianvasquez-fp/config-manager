@@ -38,9 +38,9 @@ jobs:
       - name: Pack
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            dotnet pack src/ConfigManager/ConfigManager.csproj -c Release --no-build -p:Version="${GITHUB_REF_NAME#v}" -o ./artifacts
+            dotnet pack src/ExeConfigManager/ExeConfigManager.csproj -c Release --no-build -p:Version="${GITHUB_REF_NAME#v}" -o ./artifacts
           else
-            dotnet pack src/ConfigManager/ConfigManager.csproj -c Release --no-build -o ./artifacts
+            dotnet pack src/ExeConfigManager/ExeConfigManager.csproj -c Release --no-build -o ./artifacts
           fi
 
       - name: NuGet Login

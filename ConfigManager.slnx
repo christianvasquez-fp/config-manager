@@ -1,8 +1,0 @@
-<Solution>
-  <Folder Name="/src/">
-    <Project Path="src/ConfigManager/ConfigManager.csproj" />
-  </Folder>
-  <Folder Name="/tests/">
-    <Project Path="tests/ConfigManager.Tests/ConfigManager.Tests.csproj" />
-  </Folder>
-</Solution>
