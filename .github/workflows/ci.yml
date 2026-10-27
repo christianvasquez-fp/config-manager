@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   ci:
@@ -30,21 +31,47 @@ jobs:
         run: dotnet test -c Release --no-build
 
       - name: Pack
-        run: dotnet pack src/ConfigManager/ConfigManager.csproj -c Release --no-build -o ./artifacts
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            dotnet pack src/ConfigManager/ConfigManager.csproj -c Release --no-build -p:Version="${GITHUB_REF_NAME#v}" -o ./artifacts
+          else
+            dotnet pack src/ConfigManager/ConfigManager.csproj -c Release --no-build -o ./artifacts
+          fi
+
+      - name: NuGet Login
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: christianvasquez
 
       - name: Publish to NuGet
         if: startsWith(github.ref, 'refs/tags/v')
-        run: dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push ./artifacts/*.nupkg --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          VERSION="${GITHUB_REF_NAME#v}"
           PREV_TAG=$(git describe --tags --abbrev=0 "${{ github.ref_name }}^" 2>/dev/null || true)
           if [ -n "$PREV_TAG" ]; then
-            COMMITS=$(git log "$PREV_TAG..${{ github.ref_name }}" --pretty=format:"- %s (%h)" --no-merges)
+            RANGE="$PREV_TAG..${{ github.ref_name }}"
           else
-            COMMITS=$(git log "${{ github.ref_name }}" --pretty=format:"- %s (%h)" --no-merges)
+            RANGE="${{ github.ref_name }}"
           fi
-          gh release create "${{ github.ref_name }}" ./artifacts/* --title "${{ github.ref_name }}" --notes "$COMMITS" --generate-notes
+
+          CHANGES=$(git log "$RANGE" --pretty=format:"%s" --no-merges \
+            | grep -Ev '^(chore|test|ci):' \
+            | sed -E 's/^[a-z]+(\([^)]+\))?: //' \
+            | awk '{ print "- " toupper(substr($0,1,1)) substr($0,2) }' || true)
+
+          if [ -z "$CHANGES" ]; then
+            CHANGES=$(git log "$RANGE" --pretty=format:"%s" --no-merges \
+              | sed -E 's/^[a-z]+(\([^)]+\))?: //' \
+              | awk '{ print "- " toupper(substr($0,1,1)) substr($0,2) }')
+          fi
+
+          NOTES=$(printf "### What's New\n\n%s\n\n### How to Install or Update\n\n\`\`\`bash\ndotnet add package ConfigManager --version %s\n\`\`\`\n" "$CHANGES" "$VERSION")
+          gh release create "${{ github.ref_name }}" ./artifacts/* --title "ConfigManager ${{ github.ref_name }}" --notes "$NOTES"
