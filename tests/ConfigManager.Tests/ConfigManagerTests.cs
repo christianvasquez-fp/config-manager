@@ -171,6 +171,7 @@ public class ConfigManagerTests
 
         var reader = new ConfigManager(configurationPath);
         Expect(reader.ReadSetting<string>("BLEGateID")).To.Equal(string.Empty);
+        Expect(reader.ReadSetting<int?>("BLEGateID")).To.Be.Null();
     }
 
     [Test]

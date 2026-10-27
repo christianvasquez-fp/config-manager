@@ -100,7 +100,13 @@ public class ConfigManager : IConfigManager
     {
         ValidateNotNullOrWhiteSpace(key, nameof(key));
 
-        return ReadSettings().TryGetValue(key, out var rawValue)
+        return TryReadValueByAttribute(
+            ReadDocument().Root!.Element(AppSettingsElementName),
+            AddElementName,
+            KeyAttributeName,
+            key,
+            ValueAttributeName,
+            out var rawValue)
             ? ConvertValue<T>(rawValue)
             : defaultValue;
     }
@@ -134,7 +140,13 @@ public class ConfigManager : IConfigManager
     {
         ValidateNotNullOrWhiteSpace(name, nameof(name));
 
-        return ReadConnectionStrings().TryGetValue(name, out var connectionString)
+        return TryReadValueByAttribute(
+            ReadDocument().Root!.Element(ConnectionStringsElementName),
+            AddElementName,
+            NameAttributeName,
+            name,
+            ConnectionStringAttributeName,
+            out var connectionString)
             ? connectionString
             : null;
     }
@@ -174,7 +186,13 @@ public class ConfigManager : IConfigManager
     {
         ValidateNotNullOrWhiteSpace(endpointName, nameof(endpointName));
 
-        return ReadEndpointAddresses().TryGetValue(endpointName, out var address)
+        return TryReadValueByAttribute(
+            GetClientSection(ReadDocument()),
+            EndpointElementName,
+            NameAttributeName,
+            endpointName,
+            AddressAttributeName,
+            out var address)
             ? address
             : null;
     }
@@ -329,6 +347,28 @@ public class ConfigManager : IConfigManager
         return result;
     }
 
+    static bool TryReadValueByAttribute(
+        XElement? section,
+        string childElementName,
+        string keyAttributeName,
+        string keyValue,
+        string valueAttributeName,
+        out string value)
+    {
+        if (section != null)
+        {
+            var element = FindElementsByAttribute(section, childElementName, keyAttributeName, keyValue).LastOrDefault();
+            if (element != null)
+            {
+                value = element.Attribute(valueAttributeName)?.Value ?? string.Empty;
+                return true;
+            }
+        }
+
+        value = string.Empty;
+        return false;
+    }
+
     static IEnumerable<XElement> FindElementsByAttribute(
         XElement parent,
         string elementName,
@@ -363,7 +403,13 @@ public class ConfigManager : IConfigManager
             return (T)(object)rawValue;
         }
 
-        var underlyingType = Nullable.GetUnderlyingType(targetType) ?? targetType;
+        var nullableUnderlyingType = Nullable.GetUnderlyingType(targetType);
+        if (nullableUnderlyingType != null && string.IsNullOrWhiteSpace(rawValue))
+        {
+            return default;
+        }
+
+        var underlyingType = nullableUnderlyingType ?? targetType;
         var converter = TypeDescriptor.GetConverter(underlyingType);
         if (converter.CanConvertFrom(typeof(string)))
         {
