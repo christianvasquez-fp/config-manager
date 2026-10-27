@@ -135,30 +135,30 @@ public class ConfigManagerTests
         manager.Create();
         var identifier = Guid.NewGuid();
 
-        manager.SetSetting("AppName", "FlashPARCS");
-        manager.SetSetting("BLEServiceEnabled", true);
-        manager.SetSetting("Location Delay", 33);
+        manager.SetSetting("AppName", "SampleApp");
+        manager.SetSetting("ServiceEnabled", true);
+        manager.SetSetting("RetryCount", 3);
         manager.SetSetting("Threshold", 12.75);
-        manager.SetSetting("Kiosk ID", identifier);
+        manager.SetSetting("InstanceId", identifier);
 
         var reader = new ConfigManager(configurationPath);
-        Expect(reader.ReadSetting<string>("AppName")).To.Equal("FlashPARCS");
-        Expect(reader.ReadSetting<bool>("BLEServiceEnabled")).To.Be.True();
-        Expect(reader.ReadSetting<int>("Location Delay")).To.Equal(33);
+        Expect(reader.ReadSetting<string>("AppName")).To.Equal("SampleApp");
+        Expect(reader.ReadSetting<bool>("ServiceEnabled")).To.Be.True();
+        Expect(reader.ReadSetting<int>("RetryCount")).To.Equal(3);
         Expect(reader.ReadSetting<double>("Threshold")).To.Equal(12.75);
-        Expect(reader.ReadSetting<Guid>("Kiosk ID")).To.Equal(identifier);
+        Expect(reader.ReadSetting<Guid>("InstanceId")).To.Equal(identifier);
     }
 
     [Test]
     public void SetSetting_WhenKeyAlreadyExists_UpdatesExistingValueAndSaves()
     {
         manager.Create();
-        manager.SetSetting("Location Delay", 33);
+        manager.SetSetting("RetryCount", 3);
 
-        manager.SetSetting("Location Delay", 99);
+        manager.SetSetting("RetryCount", 10);
 
         var reader = new ConfigManager(configurationPath);
-        Expect(reader.ReadSetting<int>("Location Delay")).To.Equal(99);
+        Expect(reader.ReadSetting<int>("RetryCount")).To.Equal(10);
         Expect(reader.ReadSettings().Count).To.Equal(1);
     }
 
@@ -167,11 +167,11 @@ public class ConfigManagerTests
     {
         manager.Create();
 
-        manager.SetSetting<string?>("BLEGateID", null);
+        manager.SetSetting<string?>("OptionalSetting", null);
 
         var reader = new ConfigManager(configurationPath);
-        Expect(reader.ReadSetting<string>("BLEGateID")).To.Equal(string.Empty);
-        Expect(reader.ReadSetting<int?>("BLEGateID")).To.Be.Null();
+        Expect(reader.ReadSetting<string>("OptionalSetting")).To.Equal(string.Empty);
+        Expect(reader.ReadSetting<int?>("OptionalSetting")).To.Be.Null();
     }
 
     [Test]
@@ -250,7 +250,7 @@ public class ConfigManagerTests
               <system.windows.forms jitDebugging="true" />
               <system.serviceModel>
                 <client>
-                  <endpoint name="NetTcpBinding_IBOFService" address="net.tcp://localhost:5000/BOFService" />
+                  <endpoint name="NetTcpBinding_IOrderService" address="net.tcp://localhost:5000/OrderService" />
                 </client>
               </system.serviceModel>
             </configuration>
@@ -260,14 +260,14 @@ public class ConfigManagerTests
 
         manager.SetAttribute("/configuration/system.windows.forms", "jitDebugging", false);
         manager.SetAttribute(
-            "/configuration/system.serviceModel/client/endpoint[@name='NetTcpBinding_IBOFService']",
+            "/configuration/system.serviceModel/client/endpoint[@name='NetTcpBinding_IOrderService']",
             "address",
-            "net.tcp://10.0.0.99:5000/BOFService");
+            "net.tcp://10.0.0.99:5000/OrderService");
 
         var reader = new ConfigManager(configurationPath);
         Expect(reader.ReadAttribute<bool>("/configuration/system.windows.forms", "jitDebugging")).To.Be.False();
-        Expect(reader.ReadAttribute<string>("/configuration/system.serviceModel/client/endpoint[@name='NetTcpBinding_IBOFService']", "address"))
-            .To.Equal("net.tcp://10.0.0.99:5000/BOFService");
+        Expect(reader.ReadAttribute<string>("/configuration/system.serviceModel/client/endpoint[@name='NetTcpBinding_IOrderService']", "address"))
+            .To.Equal("net.tcp://10.0.0.99:5000/OrderService");
     }
 
     [Test]
@@ -338,19 +338,19 @@ public class ConfigManagerTests
     {
         manager.Create();
 
-        manager.SetConnectionString("MainDatabase", "Server=localhost;Database=Parking;", "System.Data.SqlClient");
+        manager.SetConnectionString("MainDatabase", "Server=localhost;Database=Application;", "System.Data.SqlClient");
         manager.SetConnectionString("LocalCache", "Data Source=cache.db");
 
         var reader = new ConfigManager(configurationPath);
         Expect(reader.ReadConnectionStrings().Count).To.Equal(2);
-        Expect(reader.ReadConnectionString("MainDatabase")).To.Equal("Server=localhost;Database=Parking;");
+        Expect(reader.ReadConnectionString("MainDatabase")).To.Equal("Server=localhost;Database=Application;");
         Expect(reader.ReadAttribute<string>("/configuration/connectionStrings/add[@name='MainDatabase']", "providerName"))
             .To.Equal("System.Data.SqlClient");
 
-        manager.SetConnectionString("MainDatabase", "Server=10.0.0.1;Database=Parking;");
+        manager.SetConnectionString("MainDatabase", "Server=10.0.0.1;Database=Application;");
 
         Expect(new ConfigManager(configurationPath).ReadConnectionString("MainDatabase"))
-            .To.Equal("Server=10.0.0.1;Database=Parking;");
+            .To.Equal("Server=10.0.0.1;Database=Application;");
     }
 
     [Test]
@@ -394,20 +394,20 @@ public class ConfigManagerTests
             <configuration>
               <system.serviceModel>
                 <client>
-                  <endpoint address="net.tcp://localhost:5000/AuthenticationService" binding="netTcpBinding" name="NetTcpBinding_IAuthenticationService" />
-                  <endpoint address="net.tcp://localhost:5000/BOFService" binding="netTcpBinding" name="NetTcpBinding_IBOFService" />
+                  <endpoint address="net.tcp://localhost:5000/AuthService" binding="netTcpBinding" name="NetTcpBinding_IAuthService" />
+                  <endpoint address="net.tcp://localhost:5000/OrderService" binding="netTcpBinding" name="NetTcpBinding_IOrderService" />
                 </client>
               </system.serviceModel>
             </configuration>
             """);
 
         Expect(manager.ReadEndpointAddresses().Count).To.Equal(2);
-        Expect(manager.ReadEndpointAddress("NetTcpBinding_IBOFService")).To.Equal("net.tcp://localhost:5000/BOFService");
+        Expect(manager.ReadEndpointAddress("NetTcpBinding_IOrderService")).To.Equal("net.tcp://localhost:5000/OrderService");
 
-        manager.SetEndpointAddress("NetTcpBinding_IBOFService", "net.tcp://192.168.1.20:5000/BOFService");
+        manager.SetEndpointAddress("NetTcpBinding_IOrderService", "net.tcp://192.168.1.20:5000/OrderService");
 
-        Expect(new ConfigManager(configurationPath).ReadEndpointAddress("NetTcpBinding_IBOFService"))
-            .To.Equal("net.tcp://192.168.1.20:5000/BOFService");
+        Expect(new ConfigManager(configurationPath).ReadEndpointAddress("NetTcpBinding_IOrderService"))
+            .To.Equal("net.tcp://192.168.1.20:5000/OrderService");
     }
 
     [Test]

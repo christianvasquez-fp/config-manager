@@ -22,12 +22,12 @@ if (!manager.Exists())
 
 // <appSettings>
 manager.SetSetting("ServiceEnabled", true);
-manager.SetSetting("Location Delay", 33);
+manager.SetSetting("RetryCount", 3);
 
 var serviceEnabled = manager.ReadSetting<bool>("ServiceEnabled");
-var locationDelay = manager.ReadSetting("Location Delay", defaultValue: 10);
+var retryCount = manager.ReadSetting("RetryCount", defaultValue: 5);
 var settings = manager.ReadSettings();
-manager.RemoveSetting("Location Delay");
+manager.RemoveSetting("RetryCount");
 
 // <connectionStrings>
 manager.SetConnectionString("MainDatabase", "Server=localhost;Database=Application;", "System.Data.SqlClient");
