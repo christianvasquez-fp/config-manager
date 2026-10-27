@@ -73,5 +73,5 @@ jobs:
               | awk '{ print "- " toupper(substr($0,1,1)) substr($0,2) }')
           fi
 
-          NOTES=$(printf "### What's New\n\n%s\n\n### How to Install or Update\n\n\`\`\`bash\ndotnet add package ConfigManager --version %s\n\`\`\`\n" "$CHANGES" "$VERSION")
-          gh release create "${{ github.ref_name }}" ./artifacts/* --title "ConfigManager ${{ github.ref_name }}" --notes "$NOTES"
+          NOTES=$(printf "### What's New\n\n%s\n\n### How to Install or Update\n\n\`\`\`bash\ndotnet add package ExeConfigManager --version %s\n\`\`\`\n" "$CHANGES" "$VERSION")
+          gh release create "${{ github.ref_name }}" ./artifacts/* --title "ExeConfigManager ${{ github.ref_name }}" --notes "$NOTES"

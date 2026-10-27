@@ -5,7 +5,7 @@ A lightweight, strongly-typed .NET Standard 2.0 library for creating, reading, u
 ## Installation
 
 ```bash
-dotnet add package ConfigManager
+dotnet add package ExeConfigManager
 ```
 
 ## Quick Start
