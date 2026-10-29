@@ -6,7 +6,7 @@ namespace ExeConfigManager;
 /// Provides strongly-typed and flexible operations to create, read, update, and delete
 /// local .exe.config files, automatically saving changes on every mutation.
 /// </summary>
-public interface IExeConfigManager
+public interface IConfigManager
 {
     /// <summary>
     /// Gets the full path to the target .exe.config file on disk.
