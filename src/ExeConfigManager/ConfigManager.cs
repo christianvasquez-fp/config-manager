@@ -8,7 +8,7 @@ namespace ExeConfigManager;
 /// <summary>
 /// Manages local .exe.config files, automatically saving changes on every mutation.
 /// </summary>
-public class ExeConfigManager : IExeConfigManager
+public class ConfigManager : IConfigManager
 {
     const string RootElementName = "configuration";
     const string AppSettingsElementName = "appSettings";
@@ -25,11 +25,11 @@ public class ExeConfigManager : IExeConfigManager
     const string AddressAttributeName = "address";
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ExeConfigManager"/> class for the specified file path.
+    /// Initializes a new instance of the <see cref="ConfigManager"/> class for the specified file path.
     /// </summary>
     /// <param name="filePath">The path to the .exe.config file.</param>
     /// <exception cref="ArgumentException">Thrown when <paramref name="filePath"/> is null, empty, or whitespace.</exception>
-    public ExeConfigManager(string filePath)
+    public ConfigManager(string filePath)
     {
         ValidateNotNullOrWhiteSpace(filePath, nameof(filePath));
         FilePath = Path.GetFullPath(filePath);

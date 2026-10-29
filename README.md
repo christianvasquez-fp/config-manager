@@ -13,7 +13,7 @@ dotnet add package ExeConfigManager
 ```csharp
 using ExeConfigManager;
 
-var manager = new ExeConfigManager(@"C:\MyApp\MyApp.exe.config");
+var manager = new ConfigManager(@"C:\MyApp\MyApp.exe.config");
 
 if (!manager.Exists())
 {
